@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ar" dir="rtl" id="htmlRoot">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>لوحة تحكم التوثيق | Nexus PMS</title>
+    <!-- //#region Edit By AI -->
+    <base href="/admin/" />
+    <!-- //#endregion Edit By AI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/css/style.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand">
+        <span class="logo-dot"></span> Nexus PMS
+        <span class="sub">| لوحة تحكم التوثيق</span>
+      </div>
+      <div class="tools">
+        <a href="../" class="home-btn" target="_blank">🌐 عرض الموقع</a>
+        <!-- //#region Edit By AI -->
+        <a href="/PrivateSettings?logout=1" class="home-btn">🚪 تسجيل الخروج</a>
+        <!-- //#endregion Edit By AI -->
+      </div>
+    </div>
+
+    <div class="admin-wrap">
+      <!-- Sections column -->
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h2>الأقسام</h2>
+          <button class="btn-primary" id="btnNewSection">+ إضافة قسم</button>
+        </div>
+        <div id="sectionsList" class="admin-list"></div>
+      </div>
+
+      <!-- Guides column -->
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h2 id="guidesPanelTitle">أدلة القسم</h2>
+          <button class="btn-primary" id="btnNewGuide" disabled>
+            + إضافة دليل
+          </button>
+        </div>
+        <div id="noSectionSelected" class="empty-hint">
+          اختر قسمًا من العمود الأيمن لعرض/إضافة أدلته
+        </div>
+        <div id="guidesList" class="admin-list"></div>
+      </div>
+    </div>
+
+    <!-- Modal: Add/Edit Section -->
+    <div class="modal-overlay" id="sectionModal">
+      <div class="modal">
+        <!-- //#region Edit By AI -->
+        <h3 id="sectionModalTitle">إضافة قسم جديد</h3>
+        <!-- //#endregion Edit By AI -->
+        <form id="sectionForm">
+          <!-- //#region Edit By AI -->
+          <label>الأيقونة (اختياري - رمز تعبيري)</label>
+          <select name="icon" id="sectionIconSelect"></select>
+          <div class="form-note">اختر أيقونة جاهزة من القائمة لهذا القسم.</div>
+          <!-- //#endregion Edit By AI -->
+
+          <label>Route (بالإنجليزي، بدون مسافات) *</label>
+          <input
+            type="text"
+            name="route"
+            placeholder="e.g. work-orders"
+            required
+            pattern="[a-z0-9\-]+"
+          />
+
+          <div class="two-col">
+            <div>
+              <label>عنوان القسم (عربي) *</label>
+              <input type="text" name="title_ar" required />
+            </div>
+            <div>
+              <label>Section Title (English) *</label>
+              <input type="text" name="title_en" required />
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <label>وصف القسم (عربي)</label>
+              <textarea name="desc_ar" rows="2"></textarea>
+            </div>
+            <div>
+              <label>Section Description (English)</label>
+              <textarea name="desc_en" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-ghost" data-close="sectionModal">
+              إلغاء
+            </button>
+            <!-- //#region Edit By AI -->
+            <button type="submit" class="btn-primary" id="sectionSubmitBtn">
+              حفظ القسم
+            </button>
+            <!-- //#endregion Edit By AI -->
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Add Guide -->
+    <div class="modal-overlay" id="guideModal">
+      <div class="modal modal-lg">
+        <!-- //#region Edit By AI -->
+        <h3 id="guideModalTitle">إضافة دليل جديد</h3>
+        <!-- //#endregion Edit By AI -->
+        <form id="guideForm">
+          <label>رقم الدليل *</label>
+          <input type="number" name="number" min="1" required />
+
+          <div class="lang-tabs">
+            <button type="button" class="lang-tab active" data-tab="ar">
+              المحتوى العربي
+            </button>
+            <button type="button" class="lang-tab" data-tab="en">
+              English Content
+            </button>
+          </div>
+
+          <div class="lang-panel" data-panel="ar">
+            <label>عنوان الدليل (عربي) *</label>
+            <input type="text" name="title_ar" required />
+            <!-- //#region Edit By AI -->
+            <label>شرح الدليل (عربي) *</label>
+            <div class="rich-editor" data-editor-lang="ar">
+              <div class="editor-toolbar" data-editor-toolbar="ar">
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="bold"
+                  title="عريض"
+                >
+                  <strong>B</strong>
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="italic"
+                  title="مائل"
+                >
+                  <em>I</em>
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="underline"
+                  title="تحته خط"
+                >
+                  <u>U</u>
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="insertUnorderedList"
+                  title="قائمة نقطية"
+                >
+                  • List
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="insertOrderedList"
+                  title="قائمة رقمية"
+                >
+                  1. List
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#2557a7"
+                  data-color="#2557a7"
+                  title="أزرق"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#0f766e"
+                  data-color="#0f766e"
+                  title="أخضر"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#c0392b"
+                  data-color="#c0392b"
+                  title="أحمر"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#7c3aed"
+                  data-color="#7c3aed"
+                  title="بنفسجي"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#f59e0b"
+                  data-color="#f59e0b"
+                  title="برتقالي"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="removeFormat"
+                  title="مسح التنسيق"
+                >
+                  Clear
+                </button>
+              </div>
+              <div
+                class="editor-surface"
+                data-editor-surface="ar"
+                contenteditable="true"
+                dir="rtl"
+              ></div>
+              <textarea name="desc_ar" data-editor-input="ar" hidden></textarea>
+            </div>
+            <div class="form-note">
+              يمكنك تنسيق النص، عمل نقاط، تلوين كلمات، أو لصق محتوى من Word
+              مباشرة.
+            </div>
+            <!-- //#endregion Edit By AI -->
+            <label>ملف الوسائط (عربي) — صورة / فيديو / GIF</label>
+            <input
+              type="file"
+              name="media_ar"
+              accept="image/*,video/mp4,video/webm"
+            />
+            <!-- //#region Edit By AI -->
+            <div class="form-note">
+              اترك ملف الوسائط فارغًا أثناء التعديل للاحتفاظ بالملف الحالي.
+            </div>
+            <!-- //#endregion Edit By AI -->
+          </div>
+
+          <div class="lang-panel" data-panel="en" style="display: none">
+            <label>Guide Title (English)</label>
+            <input type="text" name="title_en" />
+            <!-- //#region Edit By AI -->
+            <label>Guide Description (English)</label>
+            <div class="rich-editor" data-editor-lang="en">
+              <div class="editor-toolbar" data-editor-toolbar="en">
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="bold"
+                  title="Bold"
+                >
+                  <strong>B</strong>
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="italic"
+                  title="Italic"
+                >
+                  <em>I</em>
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="underline"
+                  title="Underline"
+                >
+                  <u>U</u>
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="insertUnorderedList"
+                  title="Bullet List"
+                >
+                  • List
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="insertOrderedList"
+                  title="Numbered List"
+                >
+                  1. List
+                </button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#2557a7"
+                  data-color="#2557a7"
+                  title="Blue"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#0f766e"
+                  data-color="#0f766e"
+                  title="Green"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#c0392b"
+                  data-color="#c0392b"
+                  title="Red"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#7c3aed"
+                  data-color="#7c3aed"
+                  title="Purple"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool color-swatch"
+                  data-command="foreColor"
+                  data-value="#f59e0b"
+                  data-color="#f59e0b"
+                  title="Orange"
+                ></button>
+                <button
+                  type="button"
+                  class="editor-tool"
+                  data-command="removeFormat"
+                  title="Clear Formatting"
+                >
+                  Clear
+                </button>
+              </div>
+              <div
+                class="editor-surface"
+                data-editor-surface="en"
+                contenteditable="true"
+                dir="ltr"
+              ></div>
+              <textarea name="desc_en" data-editor-input="en" hidden></textarea>
+            </div>
+            <div class="form-note">
+              You can paste formatted content directly from Word and keep most
+              rich text styles.
+            </div>
+            <!-- //#endregion Edit By AI -->
+            <label>Media File (English) — Image / Video / GIF</label>
+            <input
+              type="file"
+              name="media_en"
+              accept="image/*,video/mp4,video/webm"
+            />
+            <!-- //#region Edit By AI -->
+            <div class="form-note">
+              Leave media empty during editing to keep the current file.
+            </div>
+            <!-- //#endregion Edit By AI -->
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-ghost" data-close="guideModal">
+              إلغاء
+            </button>
+            <!-- //#region Edit By AI -->
+            <button type="submit" class="btn-primary" id="guideSubmitBtn">
+              حفظ الدليل
+            </button>
+            <!-- //#endregion Edit By AI -->
+          </div>
+          <div
+            class="upload-progress"
+            id="uploadProgress"
+            style="display: none"
+          >
+            <div class="bar"><div class="fill" id="uploadFill"></div></div>
+            <span id="uploadPct">0%</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

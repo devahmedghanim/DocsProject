@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "nHweb+o79VgkhcCx1lzz1eh/tAkiB/vqEGVUhcUqTDA=",
+  "Source": "NexusPms.Api",
+  "BasePath": "_content/NexusPms.Api",
+  "Mode": "Default",
+  "ManifestType": "Publish",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

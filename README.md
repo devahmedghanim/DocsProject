@@ -1,139 +1,98 @@
-# Nexus PMS Documentations
+# Frontend
 
-منصة توثيق داخلية بسيطة واحترافية — بدون قاعدة بيانات، كل البيانات مخزّنة في ملفات JSON ومجلد رفع للوسائط. مبنية لتعمل مباشرة على IIS.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.7.
 
----
+## Development server
 
-## 1) هيكل المشروع
-
-```
-NexusPMS-Documentation/
-├── index.html              ← الواجهة العامة (الصفحة الرئيسية + صفحات الأقسام)
-├── web.config               ← إعدادات IIS (راوت /PrivateSettings، رفع الفيديوهات، أنواع الملفات)
-├── assets/
-│   ├── css/style.css        ← التصميم العام (متجاوب + أنيميشن)
-│   └── js/
-│       ├── i18n.js          ← نصوص الواجهة (عربي/إنجليزي)
-│       └── app.js           ← منطق العرض، الراوتنج، اللغة، Local Storage
-├── admin/                   ← لوحة التحكم (يُنصح بربطها بمسار /PrivateSettings عبر web.config)
-│   ├── index.html
-│   ├── admin.css
-│   └── admin.js
-├── api/                     ← السكربتات الخلفية (PHP) لحفظ البيانات بدون قاعدة بيانات
-│   ├── utils.php
-│   ├── save_section.php
-│   ├── save_guide.php
-│   └── delete_guide.php
-├── data/
-│   ├── sections.json        ← قائمة الأقسام (يُنشأ/يُعدَّل تلقائيًا من لوحة التحكم)
-│   └── guides/
-│       └── <route>.json     ← أدلة كل قسم (ملف JSON منفصل لكل قسم)
-└── uploads/
-    └── <route>/<guideId>/ar|en/media.*   ← الصور/الفيديوهات المرفوعة لكل دليل، منفصلة لكل لغة
-```
-
-تم تجهيز قسم تجريبي واحد (`work-orders`) بثلاثة أدلة كمثال حي على طريقة العمل — احذفه أو عدّله من لوحة التحكم كما تريد.
-
----
-
-## 2) متطلبات السيرفر (IIS)
-
-هذا المشروع **Front-end بالكامل بدون بناء (build)**، لكنه يحتاج تشغيل PHP لحفظ البيانات من لوحة التحكم (لأنه مفيش قاعدة بيانات، فالحفظ بيتم عن طريق كتابة ملفات على السيرفر، وده محتاج كود سيرفر بسيط).
-
-خطوات التجهيز على IIS:
-
-1. **تثبيت PHP على IIS** (لو مش مثبت):
-   - أسهل طريقة: تثبيت [PHP Manager for IIS](https://www.iis.net/downloads/microsoft/php-manager) من Microsoft، وهو بيسجل PHP كـ FastCGI Handler تلقائيًا.
-   - أو يدويًا: نزّل PHP (النسخة non-thread-safe) وسجّله في IIS من "Handler Mappings" كـ FastCGI module يشير لملف `php-cgi.exe`.
-
-2. **تثبيت IIS URL Rewrite Module** (لو مش مثبت) — مطلوب فقط عشان رابط `/PrivateSettings` يشتغل. تقدر تنزّله من موقع IIS الرسمي مجانًا.
-
-3. انسخ محتويات هذا المجلد بالكامل لمجلد الموقع على IIS (مثلًا `C:\inetpub\wwwroot\NexusDocs`)، واربطه بـ Site/Application Path كالمعتاد.
-
-4. **صلاحيات الكتابة**: اعطِ صلاحية Write/Modify لمستخدم IIS (عادة `IIS_IUSRS` أو `IUSR`) على المجلدات التالية فقط:
-   - `data/`
-   - `uploads/`
-     (باقي المجلدات تكفي صلاحية قراءة فقط)
-
-5. لو حابب ترفع فيديوهات كبيرة، تأكد من إعدادات `php.ini`:
-   ```
-   upload_max_filesize = 200M
-   post_max_size = 210M
-   max_execution_time = 300
-   ```
-   (ملف `web.config` مضبوط بالفعل على حد أقصى 200MB من جهة IIS)
-
----
-
-## 3) الروابط
-
-| الرابط | الوظيفة                        |
-| ------ | ------------------------------ |
-| `/`    | الصفحة الرئيسية — جريد الأقسام |
-
-<!-- //#region Edit By AI -->
-
-| `/work-orders` | صفحة قسم معيّن (بالـ Route اللي حددته) |
-| `/work-orders/<guideId>` | فتح دليل معيّن مباشرة داخل قسمه (تقدر تبعت الرابط ده للمستخدمين) |
-
-<!-- //#endregion Edit By AI -->
-
-| `/PrivateSettings` | لوحة التحكم (إضافة أقسام/أدلة) |
-
-<!-- //#region Edit By AI -->
-
-> ملحوظة: التنقل بين الأقسام والأدلة أصبح يستخدم مسارات نظيفة بدون `#`. على IIS يلزم `URL Rewrite` لتوجيه أي مسار غير ملف فعلي إلى `index.html`، وللتشغيل المحلي استخدم راوتر PHP المرفق.
-
-<!-- //#endregion Edit By AI -->
-
----
-
-## 4) طريقة الاستخدام (لوحة التحكم)
-
-1. افتح `/PrivateSettings`
-2. اضغط **"+ إضافة قسم"** وحدد:
-   - Route (بالإنجليزي فقط، مثال: `invoices`)
-   - عنوان القسم بالعربي والإنجليزي
-   - وصف مختصر (اختياري)
-   - أيقونة (إيموجي، اختياري)
-3. اضغط على القسم من العمود الأيمن، ثم **"+ إضافة دليل"**:
-   - رقم الدليل (ترتيب ظهوره)
-   - تبويب "المحتوى العربي": العنوان + الشرح + رفع صورة/فيديو/GIF
-   - تبويب "English Content": نفس الحقول بالإنجليزي (اختياري، لو مش هتضيفه دلوقتي يظهر بالعربي فقط لحد ما تضيفه)
-4. احفظ — هيظهر الدليل فورًا في الموقع.
-
----
-
-## 5) الخصائص المطبّقة
-
-- ✅ جريد أقسام رئيسي بتصميم Cards متحركة
-- ✅ صفحة قسم بقائمة أدلة جانبية + محتوى بنظام Accordion قابل للطي
-- ✅ حد أقصى دليلين مفتوحين في نفس الوقت (بيقفل الأقدم تلقائيًا)
-- ✅ حفظ الحالة بالكامل في LocalStorage: اللغة، آخر صفحة/دليل مفتوح، حالة الطي، موضع السكرول — الرجوع للصفحة أو الريفرش يرجعك بالظبط لمكانك
-- ✅ دعم كامل عربي/إنجليزي (RTL/LTR) مع محتوى منفصل (نص + وسائط) لكل لغة
-- ✅ تصميم متجاوب (Responsive) على الموبايل والتابلت
-- ✅ أنيميشن Reveal-on-scroll + انتقالات سلسة للفتح/الطي والتنقل
-- ✅ رفع صور / فيديو (mp4, webm, mov) / صور متحركة GIF لكل دليل ولكل لغة
-- ✅ روابط مباشرة قابلة للمشاركة لكل دليل
-- ✅ بدون قاعدة بيانات — تخزين بملفات JSON + مجلد رفع منظم تلقائيًا
-
----
-
-## 6) لو حبيت تشغّله محليًا للتجربة بسرعة (بدون IIS/PHP)
-
-الواجهة العامة (`index.html`) تقرأ البيانات فقط (GET) فتقدر تجربها بأي سيرفر ستاتيك بسيط، لكن لوحة التحكم محتاجة PHP شغّال عشان الحفظ يشتغل فعليًا.
-
-<!-- //#region Edit By AI -->
-
-لو عايز تشغّل المشروع كاملًا محليًا مع الروابط النظيفة و`PHP API`:
+To start a local development server, run:
 
 ```bash
-php -S 127.0.0.1:8000 router.php
+ng serve
 ```
 
-بعدها افتح:
+Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-- `http://127.0.0.1:8000/`
-- `http://127.0.0.1:8000/work-orders`
-- `http://127.0.0.1:8000/admin/`
-<!-- //#endregion Edit By AI -->
+## Code scaffolding
+
+Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+
+```bash
+ng generate component component-name
+```
+
+For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+
+```bash
+ng generate --help
+```
+
+## Building
+
+To build the project run:
+
+```bash
+ng build
+```
+
+This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+
+## Running unit tests
+
+To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+
+```bash
+ng test
+```
+
+## Running end-to-end tests
+
+For end-to-end (e2e) testing, run:
+
+```bash
+ng e2e
+```
+
+Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+
+## Additional Resources
+
+For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Publish Layout (Root + Api Folder)
+
+Running:
+
+```bash
+npm run release
+```
+
+Produces this structure:
+
+```text
+dist/DocsNexusPMS/
+	index.html
+	main-*.js
+	styles-*.css
+	web.config
+	Api/
+		NexusPms.Api
+		appsettings.json
+		web.config
+		public/
+			data/
+			uploads/
+```
+
+Routing model:
+
+```text
+Frontend: http://localhost:2408 or https://doc.ecss-sa.com/
+API:      http://localhost:2408/api or https://doc.ecss-sa.com/api
+```
+
+IIS notes:
+
+1. Deploy `dist/DocsNexusPMS` as the website root.
+2. Keep API running from `dist/DocsNexusPMS/Api` on `127.0.0.1:2408`.
+3. Root `web.config` proxies `/api`, `/data`, and `/uploads` to `127.0.0.1:2408`.
+4. Ensure IIS modules `URL Rewrite` and `Application Request Routing (ARR)` are installed and ARR proxy is enabled.

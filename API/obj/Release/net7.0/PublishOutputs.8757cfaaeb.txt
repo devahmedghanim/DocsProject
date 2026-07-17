@@ -1,0 +1,15 @@
+/Users/ahmedghanim/DocsProject/dist/iis/NexusPms.Api
+/Users/ahmedghanim/DocsProject/dist/iis/appsettings.Development.json
+/Users/ahmedghanim/DocsProject/dist/iis/appsettings.json
+/Users/ahmedghanim/DocsProject/dist/iis/NexusPms.Api.dll
+/Users/ahmedghanim/DocsProject/dist/iis/NexusPms.Api.deps.json
+/Users/ahmedghanim/DocsProject/dist/iis/NexusPms.Api.runtimeconfig.json
+/Users/ahmedghanim/DocsProject/dist/iis/NexusPms.Api.pdb
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.IdentityModel.Abstractions.dll
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.IdentityModel.JsonWebTokens.dll
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.IdentityModel.Logging.dll
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.IdentityModel.Protocols.dll
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/Users/ahmedghanim/DocsProject/dist/iis/Microsoft.IdentityModel.Tokens.dll
+/Users/ahmedghanim/DocsProject/dist/iis/System.IdentityModel.Tokens.Jwt.dll

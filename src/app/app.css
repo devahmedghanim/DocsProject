@@ -1,0 +1,17 @@
+/* //#region Edit By AI */
+:host {
+  display: block;
+}
+
+.page-shell {
+  min-height: calc(100vh - 140px);
+}
+
+.site-footer {
+  max-width: 1300px;
+  margin: 16px auto 28px;
+  padding: 0 28px;
+  color: #6b7488;
+  font-size: 13px;
+}
+/* //#endregion Edit By AI */

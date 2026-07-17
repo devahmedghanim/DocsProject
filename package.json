@@ -1,0 +1,43 @@
+{
+  "name": "DocsNexusPMS",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && node --max-old-space-size=8192 ./node_modules/@angular/cli/bin/ng serve --port 4200 -o'",
+    "serve": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && node --max-old-space-size=8192 ./node_modules/@angular/cli/bin/ng serve --port 4200'",
+    "hot": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && node --max-old-space-size=8192 ./node_modules/@angular/cli/bin/ng serve --hmr --port 4200 -o'",
+    "build": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && rm -rf dist/iis && node --max-old-space-size=8192 ./node_modules/@angular/cli/bin/ng build --configuration production && cp -R dist/DocsNexusPMS/browser/. dist/DocsNexusPMS/ && cp web.config dist/DocsNexusPMS/web.config && rm -rf dist/DocsNexusPMS/browser dist/DocsNexusPMS/prerendered-routes.json dist/DocsNexusPMS/data dist/DocsNexusPMS/uploads'",
+    "release": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && rm -rf dist/iis && node --max-old-space-size=8192 ./node_modules/@angular/cli/bin/ng build --configuration production && cp -R dist/DocsNexusPMS/browser/. dist/DocsNexusPMS/ && cp web.config dist/DocsNexusPMS/web.config && rm -rf dist/DocsNexusPMS/browser dist/DocsNexusPMS/prerendered-routes.json dist/DocsNexusPMS/data dist/DocsNexusPMS/uploads && rm -rf dist/DocsNexusPMS/Api && DOTNET_CMD=$(command -v dotnet || echo /usr/local/share/dotnet/dotnet) && \"$DOTNET_CMD\" publish API/NexusPms.Api.csproj -c Release -o ./dist/DocsNexusPMS/Api && mkdir -p public/data/guides public/uploads dist/DocsNexusPMS/Api/public/data/guides dist/DocsNexusPMS/Api/public/uploads dist/DocsNexusPMS/Api/logs && node ./scripts/enable-api-stdout-log.mjs && cp -R public/data/. dist/DocsNexusPMS/Api/public/data/ && cp -R public/uploads/. dist/DocsNexusPMS/Api/public/uploads/'",
+    "watch": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && ng build --watch --configuration development'",
+    "test": "bash -i -c 'source ~/.nvm/nvm.sh && nvm use 22 && ng test'",
+    "clean": "sudo lsof -t -i tcp:4200 | xargs kill -9",
+    "clean-cache": "sudo rm -rf .angular",
+    "clean-node": "sudo rm -rf node_modules"
+  },
+  "private": true,
+  "packageManager": "npm@10.9.8",
+  "dependencies": {
+    "@angular/cdk": "^22.0.5",
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "ngx-quill": "^31.0.1",
+    "primeicons": "^8.0.0",
+    "primeng": "^22.0.0",
+    "quill": "^2.0.3",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.0.7",
+    "@angular/cli": "^22.0.7",
+    "@angular/compiler-cli": "^22.0.0",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.0.8"
+  }
+}

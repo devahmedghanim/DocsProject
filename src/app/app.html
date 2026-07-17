@@ -1,0 +1,34 @@
+<!-- //#region Edit By AI -->
+<div class="topbar">
+  <a routerLink="/" class="brand">
+    <span class="logo-dot"></span>
+    <span>Nexus PMS</span>
+    <span class="sub">{{ lang() === 'ar' ? '| التوثيق' : '| Documentation' }}</span>
+  </a>
+
+  <div class="tools">
+    <a routerLink="/" class="home-btn" routerLinkActive="active">
+      {{ lang() === 'ar' ? '🏠 الرئيسية' : '🏠 Home' }}
+    </a>
+    <a routerLink="/PrivateSettings" class="home-btn admin-btn" routerLinkActive="active">
+      {{ lang() === 'ar' ? '⚙️ لوحة التحكم' : '⚙️ Admin' }}
+    </a>
+    <div class="lang-switch">
+      <button type="button" (click)="setLang('ar')" [class.active]="lang() === 'ar'">AR</button>
+      <button type="button" (click)="setLang('en')" [class.active]="lang() === 'en'">EN</button>
+    </div>
+  </div>
+</div>
+
+<main class="page-shell" [attr.dir]="lang() === 'ar' ? 'rtl' : 'ltr'">
+  <router-outlet></router-outlet>
+</main>
+
+<footer class="site-footer">
+  <span>{{
+    lang() === 'ar'
+      ? 'نظام Nexus PMS — منصة التوثيق الداخلية'
+      : 'Nexus PMS — Internal Documentation Platform'
+  }}</span>
+</footer>
+<!-- //#endregion Edit By AI -->

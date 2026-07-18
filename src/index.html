@@ -11,6 +11,33 @@
       href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <!-- //#region Edit By AI -->
+    <script>
+      (() => {
+        try {
+          const savedTheme = localStorage.getItem('npms_theme');
+          const isDark = savedTheme !== 'light';
+          document.documentElement.classList.toggle('dark-mode-preload', isDark);
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch {
+          document.documentElement.classList.add('dark-mode-preload');
+          document.documentElement.style.colorScheme = 'dark';
+        }
+      })();
+    </script>
+    <style>
+      html,
+      body {
+        background-color: #f7f2ec;
+      }
+
+      html.dark-mode-preload,
+      html.dark-mode-preload body {
+        background-color: #0b1220 !important;
+        color: #e8eefc;
+      }
+    </style>
+    <!-- //#endregion Edit By AI -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
   <body>

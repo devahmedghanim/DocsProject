@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { UiStateService } from './services/ui-state.service';
@@ -21,10 +21,16 @@ export class App {
 
   private readonly routeKey = 'npms_last_route';
   private readonly scrollPrefix = 'npms_scroll_';
+  private readonly themeKey = 'npms_theme';
 
   readonly lang = this.ui.lang;
+  readonly isDarkMode = signal(true);
 
   ngOnInit(): void {
+    const savedTheme = localStorage.getItem(this.themeKey);
+    this.isDarkMode.set(savedTheme !== 'light');
+    this.applyGlobalTheme();
+
     const current = this.normalizePath(this.router.url);
     const last = this.normalizePath(localStorage.getItem(this.routeKey) || '/');
 
@@ -55,10 +61,18 @@ export class App {
       window.clearTimeout(this.scrollTimer);
     }
     this.revealObserver?.disconnect();
+    this.removeGlobalDarkMode();
   }
 
   setLang(lang: 'ar' | 'en'): void {
     this.ui.setLang(lang);
+  }
+
+  toggleTheme(): void {
+    const nextIsDark = !this.isDarkMode();
+    this.isDarkMode.set(nextIsDark);
+    localStorage.setItem(this.themeKey, nextIsDark ? 'dark' : 'light');
+    this.applyGlobalTheme();
   }
 
   private readonly handleScroll = (): void => {
@@ -153,6 +167,25 @@ export class App {
     const withLeadingSlash = noQuery.startsWith('/') ? noQuery : `/${noQuery}`;
     const compact = withLeadingSlash.replace(/\/{2,}/g, '/');
     return compact.replace(/\/+$/, '') || '/';
+  }
+
+  private applyGlobalTheme(): void {
+    if (this.isDarkMode()) {
+      document.body.classList.add('dark-mode');
+      document.documentElement.classList.add('dark-mode-preload');
+      document.documentElement.style.colorScheme = 'dark';
+      return;
+    }
+
+    document.body.classList.remove('dark-mode');
+    document.documentElement.classList.remove('dark-mode-preload');
+    document.documentElement.style.colorScheme = 'light';
+  }
+
+  private removeGlobalDarkMode(): void {
+    document.body.classList.remove('dark-mode');
+    document.documentElement.classList.remove('dark-mode-preload');
+    document.documentElement.style.colorScheme = '';
   }
   //#endregion Edit By AI
 }

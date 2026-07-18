@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { Group, Section } from '../models';
 import { DocsApiService } from '../services/docs-api.service';
 import { UiStateService } from '../services/ui-state.service';
@@ -46,7 +47,7 @@ import { UiStateService } from '../services/ui-state.service';
           <div class="group-card-sheen"></div>
           <span class="group-card-title">
             <span class="group-card-icon">{{ group.icon || '📂' }}</span>
-            <span>{{ lang() === 'ar' ? group.title.ar : group.title.en }}</span>
+            <span class="group-card-title-text">{{ lang() === 'ar' ? group.title.ar : group.title.en }}</span>
           </span>
           <span class="group-card-count">{{ formatSectionsCount(counts()[group.route] || 0) }}</span>
         </a>
@@ -61,7 +62,7 @@ import { UiStateService } from '../services/ui-state.service';
 
     <ng-template #emptyTpl>
       <div class="empty-state">
-        <div class="emoji">🗂️</div>
+        <div class="emoji">📄</div>
         <div>{{ t().noGroups }}</div>
         <div style="font-size:12.5px;margin-top:6px;opacity:.7">{{ t().noGroupsSub }}</div>
       </div>
@@ -130,15 +131,32 @@ export class HomePageComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.getGroups().subscribe({
-      next: (groups) => {
+    const cachedGroups = this.api.peekGroups();
+    const cachedSections = this.api.peekSections();
+
+    if (cachedGroups.length) {
+      this.groups.set(cachedGroups);
+    }
+
+    if (cachedSections.length) {
+      this.sections.set(cachedSections);
+      this.loadCounts(cachedSections);
+      this.totalSections.set(cachedSections.length);
+      this.page.set(1);
+      this.loading.set(false);
+    }
+
+    forkJoin({
+      groups: this.api.getGroups(),
+      sections: this.api.getSections(),
+    }).subscribe({
+      next: ({ groups, sections }) => {
         this.groups.set(groups ?? []);
-        this.api.getSections().subscribe((sections) => {
-          this.sections.set(sections ?? []);
-          this.loadCounts(sections ?? []);
-          this.totalSections.set((sections ?? []).length);
-          this.loading.set(false);
-        });
+        this.sections.set(sections ?? []);
+        this.loadCounts(sections ?? []);
+        this.totalSections.set((sections ?? []).length);
+        this.page.set(1);
+        this.loading.set(false);
       },
       error: () => this.loading.set(false),
     });

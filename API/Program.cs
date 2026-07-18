@@ -98,6 +98,20 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(dataRoot),
     RequestPath = "/data",
 });
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/data") || context.Request.Path.StartsWithSegments("/uploads"))
+    {
+        if (!IsTrustedAssetRequest(context.Request))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsync("Forbidden");
+            return;
+        }
+    }
+
+    await next();
+});
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsRoot),
@@ -875,6 +889,36 @@ static bool TryNormalizeVideoInPlace(string filePath)
 
         return false;
     }
+}
+
+static bool IsTrustedAssetRequest(HttpRequest request)
+{
+    var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "https://ecss-sa.com",
+        "https://docs.ecss-sa.com",
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",
+    };
+
+    var origin = request.Headers.Origin.ToString();
+    if (!string.IsNullOrWhiteSpace(origin) && allowedOrigins.Contains(origin))
+    {
+        return true;
+    }
+
+    var referer = request.Headers.Referer.ToString();
+    if (Uri.TryCreate(referer, UriKind.Absolute, out var refererUri))
+    {
+        var normalizedReferer = $"{refererUri.Scheme}://{refererUri.Host}{(refererUri.IsDefaultPort ? string.Empty : $":{refererUri.Port}")}";
+        if (allowedOrigins.Contains(normalizedReferer))
+        {
+            return true;
+        }
+    }
+
+    var fetchSite = request.Headers["Sec-Fetch-Site"].ToString();
+    return string.IsNullOrWhiteSpace(fetchSite) || fetchSite is "same-origin" or "same-site" or "none";
 }
 
 static byte[] ResolveSigningKeyBytes(string configuredTokenKey)

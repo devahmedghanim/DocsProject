@@ -11,12 +11,21 @@
       {{ lang() === 'ar' ? '🏠 الرئيسية' : '🏠 Home' }}
     </a>
     <a routerLink="/PrivateSettings" class="home-btn admin-btn" routerLinkActive="active">
-      {{ lang() === 'ar' ? '⚙️ لوحة التحكم' : '⚙️ Admin' }}
+      {{ lang() === 'ar' ? '⚙️ مسئول' : '⚙️ Admin' }}
     </a>
     <div class="lang-switch">
       <button type="button" (click)="setLang('ar')" [class.active]="lang() === 'ar'">AR</button>
       <button type="button" (click)="setLang('en')" [class.active]="lang() === 'en'">EN</button>
     </div>
+    <button
+      type="button"
+      class="home-btn theme-toggle-btn"
+      (click)="toggleTheme()"
+      [attr.title]="lang() === 'ar' ? 'تبديل وضع الألوان' : 'Toggle theme'"
+      [attr.aria-label]="lang() === 'ar' ? 'تبديل وضع الألوان' : 'Toggle theme'"
+    >
+      {{ isDarkMode() ? '🌙' : '☀️' }}
+    </button>
   </div>
 </div>
 

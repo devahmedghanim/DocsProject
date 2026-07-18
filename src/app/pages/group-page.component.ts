@@ -1,16 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { Group, Section } from '../models';
 import { DocsApiService } from '../services/docs-api.service';
 import { UiStateService } from '../services/ui-state.service';
 
 //#region Edit By AI
 @Component({
-    selector: 'app-group-page',
-    standalone: true,
-    imports: [CommonModule, RouterLink],
-    template: `
+  selector: 'app-group-page',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  template: `
     <section *ngIf="!loading(); else loadingTpl">
       <ng-container *ngIf="group() as currentGroup; else notFoundTpl">
         <nav class="breadcrumb">
@@ -35,7 +36,7 @@ import { UiStateService } from '../services/ui-state.service';
             <a class="section-card reveal" *ngFor="let section of pagedSections()" [routerLink]="'/' + currentGroup.route + '/' + section.route">
               <span class="arrow">{{ lang() === 'ar' ? '←' : '→' }}</span>
               <div class="section-card-top">
-                <div class="icon">{{ section.icon || '📄' }}</div>
+                <div class="icon"><span class="icon-glyph">{{ section.icon || '📄' }}</span></div>
                 <div class="section-chip">{{ lang() === 'ar' ? currentGroup.title.ar : currentGroup.title.en }}</div>
               </div>
               <h3>{{ lang() === 'ar' ? section.title.ar : section.title.en }}</h3>
@@ -63,76 +64,91 @@ import { UiStateService } from '../services/ui-state.service';
 
     <ng-template #emptyTpl>
       <div class="empty-state">
-        <div class="emoji">📂</div>
+        <div class="emoji">📄</div>
         <div>{{ lang() === 'ar' ? 'لا توجد أقسام داخل هذه المجموعة' : 'No sections in this group yet' }}</div>
       </div>
     </ng-template>
 
     <ng-template #notFoundTpl>
       <div class="empty-state">
-        <div class="emoji">📂</div>
+        <div class="emoji">📄</div>
         <div>{{ lang() === 'ar' ? 'المجموعة غير موجودة' : 'Group not found' }}</div>
       </div>
     </ng-template>
   `,
 })
 export class GroupPageComponent implements OnInit {
-    private readonly api = inject(DocsApiService);
-    private readonly route = inject(ActivatedRoute);
-    private readonly ui = inject(UiStateService);
+  private readonly api = inject(DocsApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly ui = inject(UiStateService);
 
-    readonly lang = this.ui.lang;
-    readonly loading = signal(true);
-    readonly routeSlug = signal('');
-    readonly page = signal(1);
-    readonly pageSize = 10;
-    readonly groups = signal<Group[]>([]);
-    readonly sections = signal<Section[]>([]);
-    readonly counts = signal<Record<string, number>>({});
-    readonly skeletonItems = signal(Array.from({ length: 10 }));
+  readonly lang = this.ui.lang;
+  readonly loading = signal(true);
+  readonly routeSlug = signal('');
+  readonly page = signal(1);
+  readonly pageSize = 10;
+  readonly groups = signal<Group[]>([]);
+  readonly sections = signal<Section[]>([]);
+  readonly counts = signal<Record<string, number>>({});
+  readonly skeletonItems = signal(Array.from({ length: 10 }));
 
-    readonly group = computed(() => this.groups().find((entry) => entry.route === this.routeSlug()) ?? null);
-    readonly filteredSections = computed(() => this.sections().filter((section) => section.groupRoute === this.routeSlug()).sort((a, b) => a.order - b.order));
-    readonly pagedSections = computed(() => {
-        const start = (this.page() - 1) * this.pageSize;
-        return this.filteredSections().slice(start, start + this.pageSize);
+  readonly group = computed(() => this.groups().find((entry) => entry.route === this.routeSlug()) ?? null);
+  readonly filteredSections = computed(() => this.sections().filter((section) => section.groupRoute === this.routeSlug()).sort((a, b) => a.order - b.order));
+  readonly pagedSections = computed(() => {
+    const start = (this.page() - 1) * this.pageSize;
+    return this.filteredSections().slice(start, start + this.pageSize);
+  });
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredSections().length / this.pageSize)));
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((params) => {
+      this.routeSlug.set(params.get('groupRoute') ?? '');
+      this.page.set(1);
+      this.load();
     });
-    readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredSections().length / this.pageSize)));
+  }
 
-    ngOnInit(): void {
-        this.route.paramMap.subscribe((params) => {
-            this.routeSlug.set(params.get('groupRoute') ?? '');
-            this.page.set(1);
-            this.load();
-        });
+  goToPage(page: number): void {
+    this.page.set(Math.min(this.totalPages(), Math.max(1, page)));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private load(): void {
+    const cachedGroups = this.api.peekGroups();
+    const cachedSections = this.api.peekSections();
+
+    if (cachedGroups.length) {
+      this.groups.set(cachedGroups);
     }
 
-    goToPage(page: number): void {
-        this.page.set(Math.min(this.totalPages(), Math.max(1, page)));
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (cachedSections.length) {
+      this.sections.set(cachedSections);
+      this.loadCounts(this.filteredSections());
+      this.loading.set(false);
+    } else {
+      this.loading.set(true);
     }
 
-    private load(): void {
-        this.loading.set(true);
-        this.api.getGroups().subscribe((groups) => {
-            this.groups.set(groups ?? []);
-            this.api.getSections().subscribe((sections) => {
-                this.sections.set(sections ?? []);
-                this.loadCounts(this.filteredSections());
-                this.loading.set(false);
-            });
-        });
-    }
+    forkJoin({
+      groups: this.api.getGroups(),
+      sections: this.api.getSections(),
+    }).subscribe(({ groups, sections }) => {
+      this.groups.set(groups ?? []);
+      this.sections.set(sections ?? []);
+      this.loadCounts(this.filteredSections());
+      this.loading.set(false);
+    });
+  }
 
-    private loadCounts(sections: Section[]): void {
-        const counts: Record<string, number> = {};
+  private loadCounts(sections: Section[]): void {
+    const counts: Record<string, number> = {};
 
-        for (const section of sections) {
-            this.api.getGuides(section.route).subscribe((guides) => {
-                counts[section.route] = guides?.length ?? 0;
-                this.counts.set({ ...counts });
-            });
-        }
+    for (const section of sections) {
+      this.api.getGuides(section.route).subscribe((guides) => {
+        counts[section.route] = guides?.length ?? 0;
+        this.counts.set({ ...counts });
+      });
     }
+  }
 }
 //#endregion Edit By AI

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, firstValueFrom, from, of } from 'rxjs';
+import { Observable, catchError, firstValueFrom, from, of, retry, tap, timer } from 'rxjs';
 import { API_RUNTIME_CONFIG } from '../config/api-runtime.config';
 import { Group, Guide, Section } from '../models';
 
@@ -14,17 +14,83 @@ export class DocsApiService {
     private readonly sectionsUrl = this.runtime.sectionsUrl;
     private readonly guidesBaseUrl = this.runtime.guidesBaseUrl;
     private readonly uploadsBaseUrl = this.runtime.uploadsBaseUrl;
+    private groupsCache: Group[] | null = null;
+    private sectionsCache: Section[] | null = null;
+    private readonly guidesCache = new Map<string, Guide[]>();
 
     getGroups(): Observable<Group[]> {
-        return this.http.get<Group[]>(this.withCacheBust(this.groupsUrl)).pipe(catchError(() => of([])));
+        if (this.groupsCache) {
+            return of([...this.groupsCache]);
+        }
+
+        return this.readCollection<Group>(this.groupsUrl).pipe(
+            tap((groups) => {
+                this.groupsCache = [...groups];
+            })
+        );
     }
 
     getSections(): Observable<Section[]> {
-        return this.http.get<Section[]>(this.withCacheBust(this.sectionsUrl)).pipe(catchError(() => of([])));
+        if (this.sectionsCache) {
+            return of([...this.sectionsCache]);
+        }
+
+        return this.readCollection<Section>(this.sectionsUrl).pipe(
+            tap((sections) => {
+                this.sectionsCache = [...sections];
+            })
+        );
     }
 
     getGuides(route: string): Observable<Guide[]> {
-        return this.http.get<Guide[]>(this.withCacheBust(this.guidesUrl(route))).pipe(catchError(() => of([])));
+        const cacheKey = this.normalizeCacheKey(route);
+        const cached = this.guidesCache.get(cacheKey);
+        if (cached) {
+            return of([...cached]);
+        }
+
+        return this.readCollection<Guide>(this.guidesUrl(route)).pipe(
+            tap((guides) => {
+                this.guidesCache.set(cacheKey, [...guides]);
+            })
+        );
+    }
+
+    mediaAssetUrl(src: string, revision?: number): string {
+        const path = src.trim();
+        if (!path) {
+            return '';
+        }
+
+        if (/^(https?:)/i.test(path)) {
+            return this.appendCacheBust(path, revision);
+        }
+
+        return this.appendCacheBust(path.startsWith('/') ? path : `/${path}`, revision);
+    }
+
+    peekGroups(): Group[] {
+        return this.groupsCache ? [...this.groupsCache] : [];
+    }
+
+    peekSections(): Section[] {
+        return this.sectionsCache ? [...this.sectionsCache] : [];
+    }
+
+    peekGuides(route: string): Guide[] {
+        return [...(this.guidesCache.get(this.normalizeCacheKey(route)) ?? [])];
+    }
+
+    hasGroupsCache(): boolean {
+        return this.groupsCache !== null;
+    }
+
+    hasSectionsCache(): boolean {
+        return this.sectionsCache !== null;
+    }
+
+    hasGuidesCache(route: string): boolean {
+        return this.guidesCache.has(this.normalizeCacheKey(route));
     }
 
     saveSection(formData: FormData): Observable<unknown> {
@@ -91,6 +157,7 @@ export class DocsApiService {
     private async persistSection(formData: FormData): Promise<{ ok: true }> {
         if (this.shouldUseApi()) {
             await firstValueFrom(this.http.post(`${this.apiBaseUrl}/sections/save`, formData));
+            this.invalidateCollections();
             return { ok: true };
         }
 
@@ -128,11 +195,13 @@ export class DocsApiService {
             const nextSections = [...sections];
             nextSections[index] = payload;
             await this.putJson(this.sectionsUrl, nextSections);
+            this.invalidateCollections();
 
             if (originalRoute !== route) {
                 const previousGuides = await firstValueFrom(this.getGuides(originalRoute));
                 await this.putJson(this.guidesUrl(route), previousGuides);
                 await this.deleteFile(this.guidesUrl(originalRoute));
+                this.guidesCache.delete(this.normalizeCacheKey(originalRoute));
             }
 
             return { ok: true };
@@ -140,12 +209,14 @@ export class DocsApiService {
 
         await this.putJson(this.sectionsUrl, [...sections, payload]);
         await this.putJson(this.guidesUrl(route), []);
+        this.invalidateCollections();
         return { ok: true };
     }
 
     private async persistGroup(formData: FormData): Promise<{ ok: true }> {
         if (this.shouldUseApi()) {
             await firstValueFrom(this.http.post(`${this.apiBaseUrl}/groups/save`, formData));
+            this.invalidateCollections();
             return { ok: true };
         }
 
@@ -182,21 +253,24 @@ export class DocsApiService {
             const nextGroups = [...groups];
             nextGroups[index] = payload;
             await this.putJson(this.groupsUrl, nextGroups);
+            this.invalidateCollections();
 
             return { ok: true };
         }
 
         await this.putJson(this.groupsUrl, [...groups, payload]);
+        this.invalidateCollections();
         return { ok: true };
     }
 
     private async persistGuide(formData: FormData): Promise<{ ok: true }> {
+        const route = String(formData.get('route') ?? '').trim();
         if (this.shouldUseApi()) {
             await firstValueFrom(this.http.post(`${this.apiBaseUrl}/guides/save`, formData));
+            this.guidesCache.delete(this.normalizeCacheKey(route));
             return { ok: true };
         }
 
-        const route = String(formData.get('route') ?? '').trim();
         if (!route) {
             throw new Error('Route is required');
         }
@@ -242,6 +316,7 @@ export class DocsApiService {
         }
 
         await this.putJson(this.guidesUrl(route), nextGuides);
+        this.guidesCache.delete(this.normalizeCacheKey(route));
         return { ok: true };
     }
 
@@ -251,6 +326,7 @@ export class DocsApiService {
         if (this.shouldUseApi()) {
             try {
                 await firstValueFrom(this.http.post(`${this.apiBaseUrl}/groups/reorder`, { orders }));
+                this.invalidateCollections();
                 return { ok: true };
             } catch {
                 for (let i = 0; i < groups.length; i += 1) {
@@ -279,6 +355,7 @@ export class DocsApiService {
         );
 
         await this.putJson(this.groupsUrl, nextGroups);
+        this.invalidateCollections();
         return { ok: true };
     }
 
@@ -288,6 +365,7 @@ export class DocsApiService {
         if (this.shouldUseApi()) {
             try {
                 await firstValueFrom(this.http.post(`${this.apiBaseUrl}/sections/reorder`, { orders }));
+                this.invalidateCollections();
                 return { ok: true };
             } catch {
                 for (let i = 0; i < sections.length; i += 1) {
@@ -317,6 +395,7 @@ export class DocsApiService {
         );
 
         await this.putJson(this.sectionsUrl, nextSections);
+        this.invalidateCollections();
         return { ok: true };
     }
 
@@ -330,6 +409,8 @@ export class DocsApiService {
             const formData = new FormData();
             formData.append('route', normalizedRoute);
             await firstValueFrom(this.http.post(`${this.apiBaseUrl}/sections/delete`, formData));
+            this.invalidateCollections();
+            this.guidesCache.delete(this.normalizeCacheKey(normalizedRoute));
             return { ok: true };
         }
 
@@ -342,6 +423,8 @@ export class DocsApiService {
         await this.putJson(this.sectionsUrl, nextSections);
         await this.deleteFile(this.guidesUrl(normalizedRoute));
         await this.deleteFile(this.backendUrl(`/uploads/${normalizedRoute}`));
+        this.invalidateCollections();
+        this.guidesCache.delete(this.normalizeCacheKey(normalizedRoute));
 
         return { ok: true };
     }
@@ -356,6 +439,7 @@ export class DocsApiService {
             const formData = new FormData();
             formData.append('route', normalizedRoute);
             await firstValueFrom(this.http.post(`${this.apiBaseUrl}/groups/delete`, formData));
+            this.invalidateCollections();
             return { ok: true };
         }
 
@@ -373,6 +457,7 @@ export class DocsApiService {
         }
 
         await this.putJson(this.groupsUrl, nextGroups);
+        this.invalidateCollections();
         return { ok: true };
     }
 
@@ -382,6 +467,7 @@ export class DocsApiService {
             formData.append('route', route);
             formData.append('id', id);
             await firstValueFrom(this.http.post(`${this.apiBaseUrl}/guides/delete`, formData));
+            this.guidesCache.delete(this.normalizeCacheKey(route));
             return { ok: true };
         }
 
@@ -399,6 +485,7 @@ export class DocsApiService {
             this.guidesUrl(route),
             guides.filter((entry) => entry.id !== id)
         );
+        this.guidesCache.delete(this.normalizeCacheKey(route));
         return { ok: true };
     }
 
@@ -409,6 +496,31 @@ export class DocsApiService {
     private withCacheBust(url: string): string {
         const separator = url.includes('?') ? '&' : '?';
         return `${url}${separator}_t=${Date.now()}`;
+    }
+
+    private appendCacheBust(url: string, revision?: number): string {
+        if (typeof revision !== 'number') {
+            return url;
+        }
+
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}v=${revision}`;
+    }
+
+    private readCollection<T>(url: string): Observable<T[]> {
+        return this.http.get<T[]>(this.withCacheBust(url)).pipe(
+            retry({ count: 2, delay: () => timer(250) }),
+            catchError(() => of([] as T[]))
+        );
+    }
+
+    private invalidateCollections(): void {
+        this.groupsCache = null;
+        this.sectionsCache = null;
+    }
+
+    private normalizeCacheKey(route: string): string {
+        return route.trim().replace(/^\/+|\/+$/g, '').toLowerCase();
     }
 
     private detectMediaType(file: File): 'image' | 'video' | 'gif' {

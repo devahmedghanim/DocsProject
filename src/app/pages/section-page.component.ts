@@ -51,7 +51,17 @@ import { UiStateService } from '../services/ui-state.service';
                       ⛶
                     </button>
                     <img *ngIf="!isVideoMedia(media)" [src]="mediaAssetUrl(media)" alt="guide media" loading="lazy" />
-                    <video *ngIf="isVideoMedia(media)" [src]="mediaAssetUrl(media)" controls preload="metadata"></video>
+                    <video
+                      *ngIf="isVideoMedia(media)"
+                      #guideVideo
+                      [src]="mediaAssetUrl(media)"
+                      controls
+                      preload="metadata"
+                      controlsList="nodownload noremoteplayback"
+                      disablePictureInPicture
+                      playsinline
+                      (loadedmetadata)="setVideoDefaults(guideVideo)"
+                    ></video>
                   </div>
                 </ng-container>
               </div>
@@ -97,14 +107,24 @@ import { UiStateService } from '../services/ui-state.service';
           <button
             type="button"
             class="media-preview-close"
-            (click)="closeMediaPopup()"
             [attr.aria-label]="lang() === 'ar' ? 'إغلاق المعاينة' : 'Close preview'"
           >
             ×
           </button>
 
           <img *ngIf="!isVideoMedia(preview)" [src]="mediaAssetUrl(preview)" alt="media preview" />
-          <video *ngIf="isVideoMedia(preview)" [src]="mediaAssetUrl(preview)" controls autoplay preload="metadata"></video>
+          <video
+            *ngIf="isVideoMedia(preview)"
+            #previewVideo
+            [src]="mediaAssetUrl(preview)"
+            controls
+            autoplay
+            preload="metadata"
+            controlsList="nodownload noremoteplayback"
+            disablePictureInPicture
+            playsinline
+            (loadedmetadata)="setVideoDefaults(previewVideo)"
+          ></video>
         </div>
       </div>
 
@@ -176,14 +196,39 @@ export class SectionPageComponent implements OnInit {
   }
 
   load(groupSlug: string, slug: string, guideId: string): void {
-    this.loading.set(true);
-    this.api.getGroups().subscribe({
-      next: (groups) => this.groups.set(groups ?? []),
-    });
+    const cachedGroups = this.api.peekGroups();
+    const cachedSections = this.api.peekSections();
+    const cachedGuides = this.api.peekGuides(slug);
 
-    this.api.getSections().subscribe({
-      next: (sections) => this.sections.set(sections ?? []),
-    });
+    if (cachedGroups.length) {
+      this.groups.set(cachedGroups);
+    }
+
+    if (cachedSections.length) {
+      this.sections.set(cachedSections);
+    }
+
+    if (cachedGuides.length) {
+      const ordered = [...cachedGuides].sort((a, b) => a.number - b.number);
+      const storageKey = this.collapsedGuidesStorageKey(groupSlug, slug);
+      const collapsed = this.resolveCollapsedGuides(groupSlug, slug, ordered.map((guide) => guide.id));
+      const nextOpen: Record<string, boolean> = Object.fromEntries(
+        ordered.map((guide) => [guide.id, !collapsed.includes(guide.id)])
+      );
+
+      if (guideId) {
+        nextOpen[guideId] = true;
+      }
+
+      this.guides.set(ordered);
+      this.openMap.set(nextOpen);
+      this.selectedGuide.set(guideId || ordered[0]?.id || '');
+      this.mediaRevision.set(Date.now());
+      this.loading.set(false);
+      this.notifyContentUpdated();
+    } else {
+      this.loading.set(true);
+    }
 
     this.api.getGuides(slug).subscribe({
       next: (guides) => {
@@ -336,9 +381,12 @@ export class SectionPageComponent implements OnInit {
   }
 
   mediaAssetUrl(media: { src: string }): string {
-    const base = media.src.startsWith('/') ? media.src : `/${media.src}`;
-    const joiner = base.includes('?') ? '&' : '?';
-    return `${base}${joiner}v=${this.mediaRevision()}`;
+    return this.api.mediaAssetUrl(media.src, this.mediaRevision());
+  }
+
+  setVideoDefaults(video: HTMLVideoElement): void {
+    video.defaultPlaybackRate = 2;
+    video.playbackRate = 2;
   }
 
   isVideoMedia(media: { type: string; src: string }): boolean {
